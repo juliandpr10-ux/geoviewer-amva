@@ -1,98 +1,218 @@
 """
 upload_images.py
-Sube las 238 tomografías PNG a Firebase Storage.
+Sube las 238 tomografías PNG a Firebase Storage y actualiza
+los documentos Lin_Sismicas en Firestore con la URL pública.
 
 Las imágenes están en formato ClickOnce (.png.deploy).
-Este script las lee directamente y las sube como PNG.
+Son PNGs reales — solo tienen extensión extra por ClickOnce packaging.
 
-REQUISITOS:
-  serviceAccountKey.json en raíz del proyecto
-  py -m pip install firebase-admin  (ya instalado)
+Rutas en Storage: imagenes/1.png, imagenes/2.png, ..., imagenes/238.png
 
 USO:
-  py scripts/upload_images.py
+  py scripts/upload_images.py            # sube todas
+  py scripts/upload_images.py --desde 50 # reanuda desde imagen 50
+  py scripts/upload_images.py --dry-run  # simula sin subir
+
+REQUISITOS:
+  Storage activado en Firebase Console (ver instrucciones al pie)
+  serviceAccountKey: detectado automáticamente (*adminsdk*.json)
 """
 
-import os, sys
+import sys, time, argparse
 from pathlib import Path
+
 import firebase_admin
-from firebase_admin import credentials, storage
+from firebase_admin import credentials, storage, firestore
 
 # ── Config ────────────────────────────────────────────────────────────────────
-IMAGES_DIR  = Path(r"C:\Users\User\OneDrive\Desktop\BDManager\BDManager V2\InstalaBD\Application Files\GeotechnicBDManager_1_0_0_35\ImagenesLineas")
-KEY_PATH    = Path(__file__).parent.parent / "serviceAccountKey.json"
-BUCKET_NAME = "geoviewer-amva.firebasestorage.app"
-STORAGE_PREFIX = "tomografias/"   # carpeta en Storage
+IMAGES_DIR = Path(r"C:\Users\User\OneDrive\Desktop\BDManager\BDManager V2\InstalaBD"
+                  r"\Application Files\GeotechnicBDManager_1_0_0_35\ImagenesLineas")
+ROOT        = Path(__file__).parent.parent
+KEY_MATCHES = list(ROOT.glob("*adminsdk*.json"))
+KEY_PATH    = KEY_MATCHES[0] if KEY_MATCHES else ROOT / "serviceAccountKey.json"
+BUCKET      = "geoviewer-amva.firebasestorage.app"
+STORAGE_DIR = "imagenes"          # carpeta en Storage
+URLS_OUT    = ROOT / "scripts" / "image_urls.json"
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def find_deploy_files() -> list[tuple[int, Path]]:
+    """
+    Devuelve lista de (numero, path) ordenada numéricamente.
+    Archivos: '1.png.deploy', '10.PNG.deploy', etc.
+    """
+    files = []
+    for f in IMAGES_DIR.iterdir():
+        if not f.suffix.lower() == ".deploy":
+            continue
+        stem = f.stem          # '1.png' o '10.PNG'
+        base = Path(stem)
+        if base.suffix.lower() == ".png" and base.stem.isdigit():
+            files.append((int(base.stem), f))
+    return sorted(files, key=lambda x: x[0])
+
+def storage_name(num: int) -> str:
+    """Nombre normalizado en Storage: imagenes/1.png"""
+    return f"{STORAGE_DIR}/{num}.png"
+
+def public_url(blob) -> str:
+    return f"https://storage.googleapis.com/{BUCKET}/{blob.name}"
+
+def bar(done: int, total: int, width: int = 25) -> str:
+    filled = int(done / total * width)
+    return "#" * filled + "-" * (width - filled)
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--desde",   type=int, default=1,
+                        help="Número de imagen desde donde empezar (para reanudar)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Simula la subida sin hacer nada real")
+    args = parser.parse_args()
+
+    # Validaciones
+    if not IMAGES_DIR.exists():
+        print(f"ERROR: Directorio no encontrado:\n  {IMAGES_DIR}")
+        sys.exit(1)
     if not KEY_PATH.exists():
-        print(f"ERROR: No se encontró {KEY_PATH}")
+        print(f"ERROR: Service account key no encontrada:\n  {KEY_PATH}")
         sys.exit(1)
 
-    if not IMAGES_DIR.exists():
-        print(f"ERROR: No se encontró directorio de imágenes: {IMAGES_DIR}")
+    files = find_deploy_files()
+    if not files:
+        print("ERROR: No se encontraron archivos .png.deploy en el directorio.")
         sys.exit(1)
+
+    # Filtrar desde --desde
+    files = [(n, p) for n, p in files if n >= args.desde]
+
+    print("=" * 58)
+    print("  GeoViewer AMVA — Subida de imagenes a Storage")
+    print("=" * 58)
+    print(f"  Bucket   : {BUCKET}")
+    print(f"  Carpeta  : {STORAGE_DIR}/")
+    print(f"  Imagenes : {len(files)} (desde #{args.desde})")
+    if args.dry_run:
+        print("  Modo     : DRY-RUN (no sube nada)")
+    print("=" * 58)
+
+    if args.dry_run:
+        for n, p in files[:5]:
+            print(f"  [DRY] {p.name} -> {storage_name(n)}")
+        if len(files) > 5:
+            print(f"  ... ({len(files) - 5} mas)")
+        return
 
     # Inicializar Firebase
-    if not firebase_admin._apps:
-        cred = credentials.Certificate(str(KEY_PATH))
-        firebase_admin.initialize_app(cred, {"storageBucket": BUCKET_NAME})
+    cred = credentials.Certificate(str(KEY_PATH))
+    firebase_admin.initialize_app(cred, {"storageBucket": BUCKET})
+    bucket_ref = storage.bucket()
+    db         = firestore.client()
 
-    bucket = storage.bucket()
+    # Cargar URLs ya subidas (si se reanuda)
+    import json
+    existing_urls: dict = {}
+    if URLS_OUT.exists():
+        existing_urls = json.loads(URLS_OUT.read_text(encoding="utf-8"))
 
-    # Buscar archivos .deploy que son PNG
-    deploy_files = sorted(IMAGES_DIR.glob("*.deploy"))
-    png_files = [f for f in deploy_files if f.stem.lower().endswith('.png') or f.stem.lower().endswith('.PNG')]
-
-    print(f"Subiendo {len(png_files)} imágenes PNG a Firebase Storage...")
-    print(f"  Bucket: {BUCKET_NAME}")
-    print(f"  Carpeta: {STORAGE_PREFIX}")
-    print()
-
-    urls = {}
+    urls   = dict(existing_urls)
     errors = []
+    t0     = time.time()
 
-    for i, deploy_path in enumerate(png_files, 1):
-        # El nombre real es el stem (sin .deploy)
-        png_name = deploy_path.stem  # ej: "1.png" o "10.PNG"
-        storage_path = STORAGE_PREFIX + png_name.lower()
+    total = len(files)
+    for i, (num, deploy_path) in enumerate(files, 1):
+        blob_name = storage_name(num)
+        label     = f"  [{i:>3}/{total}]  {num:>3}.png"
 
         try:
-            blob = bucket.blob(storage_path)
-            blob.upload_from_filename(
-                str(deploy_path),
-                content_type="image/png"
-            )
+            blob = bucket_ref.blob(blob_name)
+            blob.upload_from_filename(str(deploy_path), content_type="image/png")
             blob.make_public()
-            url = blob.public_url
-            img_id = png_name.lower().replace('.png', '')
-            urls[img_id] = url
+            url = public_url(blob)
+            urls[str(num)] = url
 
-            print(f"  [{i:3d}/{len(png_files)}] {png_name} → {storage_path} ✓")
+            elapsed = time.time() - t0
+            rate    = i / elapsed
+            eta     = int((total - i) / rate) if rate > 0 else 0
+            print(f"\r{label}  [{bar(i, total)}]  ETA {eta}s   ", end="", flush=True)
 
         except Exception as e:
-            print(f"  [{i:3d}/{len(png_files)}] {png_name} ERROR: {e}")
-            errors.append((png_name, str(e)))
+            err_msg = str(e)
+            # Detectar Storage no activado
+            if "does not exist" in err_msg or "bucket" in err_msg.lower():
+                print(f"\n\n  ERROR DE STORAGE: {err_msg}")
+                print("\n  ── Activa Firebase Storage ──────────────────────────")
+                print("  1. Ve a: https://console.firebase.google.com/project/geoviewer-amva/storage")
+                print("  2. Haz clic en 'Comenzar'")
+                print("  3. Elige 'Modo de producción' y haz clic en 'Siguiente'")
+                print("  4. Selecciona una región (ej: us-central1) y haz clic en 'Listo'")
+                print("  5. Vuelve a ejecutar: py scripts/upload_images.py")
+                print("  ─────────────────────────────────────────────────────\n")
+                # Guardar lo que llevamos antes de salir
+                _save_urls(urls, URLS_OUT)
+                sys.exit(1)
+            print(f"\n{label}  ERROR: {err_msg[:60]}")
+            errors.append((num, err_msg))
+            continue
 
-    # Guardar mapeo de URLs
-    output_path = Path(__file__).parent / "image_urls.py"
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write("# Generado automáticamente por upload_images.py\n")
-        f.write("# Mapeo: ID numérico -> URL pública de Firebase Storage\n\n")
-        f.write("IMAGE_URLS = {\n")
-        for k, v in sorted(urls.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 0):
-            f.write(f'    "{k}": "{v}",\n')
-        f.write("}\n")
+    print()   # nueva línea tras el \r
 
-    print(f"\n✅ Subidas: {len(urls)}")
+    # Guardar mapeo JSON
+    _save_urls(urls, URLS_OUT)
+
+    # Actualizar documentos Lin_Sismicas en Firestore con URL correcta
+    updated = _update_firestore_urls(db, urls)
+
+    elapsed = int(time.time() - t0)
+    print("\n" + "=" * 58)
+    print(f"  Subidas      : {len(urls) - len(existing_urls)} nuevas  ({len(urls)} total)")
+    print(f"  Errores      : {len(errors)}")
+    print(f"  Firestore    : {updated} docs Lin_Sismicas actualizados")
+    print(f"  Tiempo       : {elapsed}s")
+    print(f"  URLs en      : scripts/image_urls.json")
+    print("=" * 58)
     if errors:
-        print(f"❌ Errores: {len(errors)}")
-        for name, err in errors:
-            print(f"   {name}: {err}")
+        print("\n  Fallos:")
+        for num, msg in errors:
+            print(f"    {num}.png — {msg[:70]}")
 
-    print(f"\nMapa de URLs guardado en: {output_path}")
-    print("Las URLs son públicas y se pueden usar en el dashboard.")
+
+def _save_urls(urls: dict, path: Path):
+    import json
+    ordered = {str(k): urls[str(k)] for k in sorted(urls.keys(), key=int)}
+    path.write_text(json.dumps(ordered, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _update_firestore_urls(db, urls: dict) -> int:
+    """
+    Actualiza el campo 'ImagenURL' en cada documento de Lin_Sismicas
+    que tenga RutaImagen = '{n}.png' con la URL pública de Storage.
+    """
+    col_ref = db.collection("Lin_Sismicas")
+    docs    = col_ref.stream()
+    batch   = db.batch()
+    count   = 0
+
+    for doc in docs:
+        data  = doc.to_dict()
+        ruta  = (data.get("RutaImagen") or "").strip()
+        # Solo rutas numéricas: '65.png', '1.png', etc.
+        stem  = Path(ruta).stem
+        if not stem.isdigit():
+            continue
+        url = urls.get(stem)
+        if url:
+            batch.update(doc.reference, {"ImagenURL": url})
+            count += 1
+            if count % 400 == 0:
+                batch.commit()
+                batch = db.batch()
+
+    if count % 400 != 0:
+        batch.commit()
+
+    return count
+
 
 if __name__ == "__main__":
     main()
