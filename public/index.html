@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoViewer AMVA — Dashboard Geotécnico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:   #1D9E75;
+      --blue:    #378ADD;
+      --amber:   #D4860B;
+      --red:     #D85A30;
+      --border:  rgba(0,0,0,0.08);
+      --bg:      #F7F7F6;
+      --bg2:     #EFEFEE;
+      --text1:   #1A1A18;
+      --text2:   #6B6B68;
+      --text3:   #A0A09C;
+      --radius:  8px;
+      --card-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --border: rgba(255,255,255,0.08);
+        --bg:     #141412;
+        --bg2:    #1E1E1C;
+        --text1:  #EEEEED;
+        --text2:  #9B9B97;
+        --text3:  #5A5A57;
+      }
+    }
+
+    body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text1); min-height: 100vh; }
+
+    /* ── Header ──────────────────────────────────────────────────────── */
+    #gv-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+      background: var(--bg); position: sticky; top: 0; z-index: 50;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+    .logo-text { font-size: 13px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text2); }
+    .header-badge { font-size: 11px; font-family: 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 4px; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); }
+    .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text3); margin-right: 5px; }
+    .status-dot.live { background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── Nav ─────────────────────────────────────────────────────────── */
+    #gv-nav {
+      display: flex; gap: 0; padding: 0 1.5rem;
+      border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .gv-tab {
+      font-size: 13px; padding: 10px 16px; border: none; background: none;
+      cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent;
+      margin-bottom: -1px; font-family: inherit; transition: color 0.15s;
+    }
+    .gv-tab:hover { color: var(--text1); }
+    .gv-tab.active { color: var(--green); border-bottom-color: var(--green); font-weight: 500; }
+
+    /* ── Sections ────────────────────────────────────────────────────── */
+    .gv-section { padding: 1.5rem; display: none; }
+    .gv-section.active { display: block; }
+
+    /* ── Loading spinner ─────────────────────────────────────────────── */
+    #loading {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; z-index: 100;
+    }
+    .spinner {
+      width: 36px; height: 36px; border: 2px solid var(--border);
+      border-top-color: var(--green); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 13px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+
+    /* ── Metric grid ─────────────────────────────────────────────────── */
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    .metric { background: var(--bg2); border-radius: var(--radius); padding: 1rem; border: 1px solid var(--border); }
+    .metric-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .metric-value { font-size: 28px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; }
+    .metric-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+    .metric-accent { color: var(--green); }
+
+    /* ── Chart cards ─────────────────────────────────────────────────── */
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1.5rem; }
+    @media (max-width: 640px) { .chart-row { grid-template-columns: 1fr; } }
+    .chart-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 1.25rem;
+      box-shadow: var(--card-shadow);
+    }
+    .chart-title { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem; }
+
+    /* ── Bar chart ───────────────────────────────────────────────────── */
+    .bar-item { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .bar-label { width: 90px; color: var(--text2); font-size: 11px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { flex: 1; height: 5px; background: var(--bg2); border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--green); border-radius: 3px; transition: width 0.4s ease; }
+    .bar-count { width: 32px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-align: right; }
+
+    /* ── Year chart ──────────────────────────────────────────────────── */
+    .year-chart { display: flex; align-items: flex-end; gap: 3px; height: 80px; }
+    .year-col { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+    .year-bar { width: 100%; background: var(--green); border-radius: 2px 2px 0 0; opacity: 0.7; min-height: 2px; transition: opacity 0.2s; }
+    .year-bar:hover { opacity: 1; }
+    .year-lbl { font-size: 8px; color: var(--text3); transform: rotate(-45deg); white-space: nowrap; font-family: 'IBM Plex Mono', monospace; }
+
+    /* ── Ensayo coverage ─────────────────────────────────────────────── */
+    .ensayo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 1.5rem; }
+    .ensayo-item { background: var(--bg2); border-radius: var(--radius); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); }
+    .ensayo-name { font-size: 12px; color: var(--text2); }
+    .ensayo-count { font-size: 18px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
+
+    /* ── Map ─────────────────────────────────────────────────────────── */
+    .map-wrap { position: relative; width: 100%; height: 500px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--bg2); }
+    #map-svg { width: 100%; height: 100%; }
+    .map-tooltip {
+      position: absolute; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 10px; font-size: 12px; pointer-events: none;
+      display: none; z-index: 10; max-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .map-legend {
+      position: absolute; bottom: 12px; left: 12px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px;
+      font-size: 11px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; color: var(--text2); }
+    .legend-item:last-child { margin-bottom: 0; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .map-controls { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+    .map-filter { font-size: 12px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text1); font-family: inherit; cursor: pointer; }
+    .map-filter.active { background: var(--green); color: white; border-color: var(--green); }
+
+    /* ── Catalogo ────────────────────────────────────────────────────── */
+    .search-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+    .search-row input, .search-row select {
+      font-size: 13px; padding: 8px 12px; border: 1px solid var(--border);
+      border-radius: 6px; background: var(--bg); color: var(--text1); font-family: inherit;
+      outline: none;
+    }
+    .search-row input:focus, .search-row select:focus { border-color: var(--green); }
+    .search-row input { flex: 1; min-width: 180px; }
+    .result-count { font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+
+    .sondeo-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .sondeo-table th {
+      text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 500;
+      color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border); background: var(--bg2);
+      position: sticky; top: 0;
+    }
+    .sondeo-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .sondeo-table tr:hover td { background: var(--bg2); cursor: pointer; }
+
+    .tag { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin: 1px; font-family: 'IBM Plex Mono', monospace; }
+    .tag-green { background: #D4F0E7; color: #0C5E44; }
+    .tag-blue  { background: #D4E5F7; color: #1A4F85; }
+    .tag-amber { background: #FAEEDA; color: #7A4400; }
+    .tag-gray  { background: var(--bg2); color: var(--text2); }
+
+    .pagination { display: flex; align-items: center; gap: 8px; margin-top: 1rem; font-size: 12px; color: var(--text2); }
+    .page-btn { border: 1px solid var(--border); background: var(--bg); color: var(--text1); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; }
+    .page-btn:hover { border-color: var(--green); }
+    .page-btn:disabled { opacity: 0.35; cursor: default; }
+    .page-btn:disabled:hover { border-color: var(--border); }
+
+    /* ── Ficha ───────────────────────────────────────────────────────── */
+    .back-btn { font-size: 12px; color: var(--text2); border: none; background: none; cursor: pointer; padding: 4px 0; margin-bottom: 1.25rem; font-family: inherit; display: flex; align-items: center; gap: 4px; }
+    .back-btn:hover { color: var(--text1); }
+    .ficha { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem; box-shadow: var(--card-shadow); }
+    .ficha-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+    .ficha-id { font-size: 24px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; }
+    .ficha-mun { font-size: 13px; color: var(--text2); margin-top: 4px; }
+    .ficha-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 1.25rem; }
+    .ficha-field-label { color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+    .ficha-field-val { font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+
+    .section-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); margin: 1.25rem 0 0.75rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+    .ensayo-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 1rem; }
+    .ensayo-table th { background: var(--bg2); padding: 6px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); font-weight: 500; border-bottom: 1px solid var(--border); }
+    .ensayo-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+    .ensayo-table tr:last-child td { border-bottom: none; }
+
+    .vs-wrap { overflow-x: auto; margin-bottom: 1rem; }
+    .vs-chart { display: flex; align-items: flex-end; gap: 3px; height: 110px; min-width: 300px; }
+    .vs-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .vs-bar-vs { background: var(--green); border-radius: 2px 2px 0 0; min-width: 8px; opacity: 0.8; }
+    .vs-bar-vp { background: var(--blue); border-radius: 2px 2px 0 0; min-width: 8px; opacity: 0.5; }
+    .vs-depth { font-size: 8px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+
+    .img-wrap { margin-top: 1rem; }
+    .tomo-img { max-width: 100%; border-radius: var(--radius); border: 1px solid var(--border); }
+    .img-placeholder { width: 100%; height: 160px; background: var(--bg2); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 12px; border: 1px dashed var(--border); }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text3); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Conectando con Firestore…</div>
+</div>
+
+<div id="app" style="display:none;">
+  <header id="gv-header">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      <span class="logo-text">GeoViewer · SIATA / AMVA</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="status-dot live" id="status-dot"></span>
+      <span class="header-badge">Valle de Aburrá · Microzonificación Sísmica</span>
+    </div>
+  </header>
+
+  <nav id="gv-nav">
+    <button class="gv-tab active" data-tab="dashboard">Dashboard</button>
+    <button class="gv-tab" data-tab="mapa">Mapa</button>
+    <button class="gv-tab" data-tab="catalogo">Catálogo</button>
+    <button class="gv-tab" data-tab="ficha">Ficha sondeo</button>
+  </nav>
+
+  <!-- ── Tab: Dashboard ─────────────────────────────────────────────── -->
+  <section id="tab-dashboard" class="gv-section active">
+    <div class="metric-grid" id="metric-grid">
+      <!-- Generado por JS -->
+    </div>
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-title">Sondeos por municipio</div>
+        <div id="mun-bars"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Distribución temporal</div>
+        <div class="year-chart" id="year-bars"></div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:1.5rem;">
+      <div class="chart-title">Cobertura de ensayos</div>
+      <div class="ensayo-grid" id="ensayo-grid"></div>
+    </div>
+  </section>
+
+  <!-- ── Tab: Mapa ──────────────────────────────────────────────────── -->
+  <section id="tab-mapa" class="gv-section">
+    <div class="map-controls" id="map-controls">
+      <button class="map-filter active" data-filter="all">Todos</button>
+      <button class="map-filter" data-filter="downhole">DownHole</button>
+      <button class="map-filter" data-filter="spt">Con SPT</button>
+    </div>
+    <div class="map-wrap">
+      <svg id="map-svg" viewBox="0 0 700 500"></svg>
+      <div class="map-tooltip" id="map-tooltip"></div>
+      <div class="map-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Con DownHole</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Solo SPT</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#888780"></div>Solo estratigrafía</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Tab: Catálogo ─────────────────────────────────────────────── -->
+  <section id="tab-catalogo" class="gv-section">
+    <div class="search-row">
+      <input type="text" id="search-input" placeholder="Buscar ID, municipio, empresa…" />
+      <select id="filter-mun"><option value="">Todos los municipios</option></select>
+      <select id="filter-ensayo">
+        <option value="">Todos los ensayos</option>
+        <option value="spt">Con SPT</option>
+        <option value="downhole">Con DownHole</option>
+        <option value="atterberg">Con Atterberg</option>
+        <option value="colresonante">Col. Resonante</option>
+        <option value="downhole+spt">DownHole + SPT</option>
+      </select>
+    </div>
+    <div class="result-count" id="result-count"></div>
+    <div style="overflow-x:auto;">
+      <table class="sondeo-table">
+        <thead><tr>
+          <th>ID</th><th>Municipio</th><th>Cota (m)</th>
+          <th>Fecha</th><th>Empresa</th><th>Ensayos</th>
+        </tr></thead>
+        <tbody id="sondeo-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button class="page-btn" id="prev-btn">‹ Anterior</button>
+      <span id="page-info"></span>
+      <button class="page-btn" id="next-btn">Siguiente ›</button>
+    </div>
+  </section>
+
+  <!-- ── Tab: Ficha ─────────────────────────────────────────────────── -->
+  <section id="tab-ficha" class="gv-section">
+    <div id="ficha-placeholder" class="empty-state">
+      Selecciona un sondeo desde el <strong>Catálogo</strong> o el <strong>Mapa</strong> para ver su ficha.
+    </div>
+    <div id="ficha-content" style="display:none;"></div>
+  </section>
+</div>
+
+<!-- Firebase SDK (modular v10) -->
+<script type="module">
+import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, getDocs, query, where, orderBy, limit }
+                             from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ── Firebase config ──────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyBCObFkPXbx_RjWIaZTXq2ABwSIDf7wCB4",
+  authDomain:        "geoviewer-amva.firebaseapp.com",
+  projectId:         "geoviewer-amva",
+  storageBucket:     "geoviewer-amva.firebasestorage.app",
+  messagingSenderId: "336704000793",
+  appId:             "1:336704000793:web:5318d4488ec0094e226b88"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ── State ────────────────────────────────────────────────────────────────────
+let SONDEOS    = [];
+let SPT_IDS    = new Set();
+let DH_IDS     = new Set();
+let ATT_IDS    = new Set();
+let CR_IDS     = new Set();   // Col_Resonante
+let filtered   = [];
+let currentPage = 0;
+const PER_PAGE  = 20;
+let mapRendered = false;
+let mapFilter   = "all";
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+async function boot() {
+  try {
+    // Parallel fetch: Sondeos + presence sets
+    const [sSnap, sptSnap, dhSnap, attSnap, crSnap] = await Promise.all([
+      getDocs(collection(db, "Sondeos")),
+      getDocs(query(collection(db, "SPT"),            limit(5000))),
+      getDocs(query(collection(db, "DownHole"),       limit(5000))),
+      getDocs(query(collection(db, "Limites_Atterberg"), limit(5000))),
+      getDocs(query(collection(db, "Col_Resonante"),  limit(5000))),
+    ]);
+
+    SONDEOS = sSnap.docs.map(d => ({ Id: d.id, ...d.data() }));
+
+    sptSnap.docs.forEach(d => SPT_IDS.add(d.data().Id_Sondeo));
+    dhSnap.docs.forEach(d  => DH_IDS.add(d.data().Id_Sondeo));
+    attSnap.docs.forEach(d => ATT_IDS.add(d.data().Id_Sondeo));
+    crSnap.docs.forEach(d  => CR_IDS.add(d.data().Id_Sondeo));
+
+    filtered = [...SONDEOS];
+
+    renderDashboard();
+    renderTable();
+    populateMunicipioFilter();
+
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("app").style.display     = "block";
+    document.getElementById("status-dot").classList.add("live");
+
+  } catch (err) {
+    document.querySelector(".loading-text").textContent = "Error conectando: " + err.message;
+    console.error(err);
+  }
+}
+
+// ── Tab navigation ───────────────────────────────────────────────────────────
+document.querySelectorAll(".gv-tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll(".gv-tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".gv-section").forEach(s => s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + tab).classList.add("active");
+    if (tab === "mapa" && !mapRendered) { renderMap(); mapRendered = true; }
+  });
+});
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  // Metrics
+  const byMun = groupBy(SONDEOS, "Municipio");
+  const metrics = [
+    ["Sondeos",      SONDEOS.length,    "geotécnicos"],
+    ["Municipios",   Object.keys(byMun).length, "Valle de Aburrá"],
+    ["DownHole",     DH_IDS.size,       "con mediciones Vs/Vp"],
+    ["SPT",          SPT_IDS.size,      "sondeos con SPT"],
+    ["Atterberg",    ATT_IDS.size,      "con límites"],
+    ["Col. Resonante", CR_IDS.size,     "registros"],
+  ];
+  document.getElementById("metric-grid").innerHTML = metrics.map(([label, val, sub], i) => `
+    <div class="metric">
+      <div class="metric-label">${label}</div>
+      <div class="metric-value ${i===0?'metric-accent':''}">${val.toLocaleString("es-CO")}</div>
+      <div class="metric-sub">${sub}</div>
+    </div>`).join("");
+
+  // Sondeos por municipio
+  const sorted = Object.entries(byMun).sort((a,b) => b[1].length - a[1].length);
+  const maxM   = sorted[0]?.[1]?.length || 1;
+  document.getElementById("mun-bars").innerHTML = sorted.slice(0, 12).map(([m, s]) => `
+    <div class="bar-item">
+      <span class="bar-label">${m || "—"}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${(s.length/maxM*100).toFixed(0)}%"></div></div>
+      <span class="bar-count">${s.length}</span>
+    </div>`).join("");
+
+  // Distribución temporal
+  const byYear = {};
+  SONDEOS.forEach(s => {
+    if (!s.Fecha) return;
+    const y = s.Fecha.slice(0, 4);
+    byYear[y] = (byYear[y] || 0) + 1;
+  });
+  const yearEntries = Object.entries(byYear).sort((a,b) => a[0].localeCompare(b[0]));
+  const maxY = Math.max(...yearEntries.map(e => e[1]), 1);
+  document.getElementById("year-bars").innerHTML = yearEntries.map(([y, c]) => `
+    <div class="year-col">
+      <div class="year-bar" style="height:${Math.round(c/maxY*70)}px" title="${y}: ${c}"></div>
+      <span class="year-lbl">${y.slice(2)}</span>
+    </div>`).join("");
+
+  // Cobertura ensayos (conteos ya disponibles como sets de Id_Sondeo)
+  document.getElementById("ensayo-grid").innerHTML = [
+    ["DownHole",      DH_IDS.size],
+    ["SPT",           SPT_IDS.size],
+    ["Atterberg",     ATT_IDS.size],
+    ["Col. Resonante",CR_IDS.size],
+  ].map(([n, c]) => `
+    <div class="ensayo-item">
+      <span class="ensayo-name">${n}</span>
+      <span class="ensayo-count">${c.toLocaleString("es-CO")}</span>
+    </div>`).join("");
+}
+
+// ── Catálogo ─────────────────────────────────────────────────────────────────
+function populateMunicipioFilter() {
+  const muns = [...new Set(SONDEOS.map(s => s.Municipio).filter(Boolean))].sort();
+  const sel  = document.getElementById("filter-mun");
+  muns.forEach(m => {
+    const o = document.createElement("option");
+    o.value = m; o.textContent = m;
+    sel.appendChild(o);
+  });
+}
+
+function applyFilters() {
+  const q   = document.getElementById("search-input").value.toLowerCase().trim();
+  const mun = document.getElementById("filter-mun").value;
+  const ens = document.getElementById("filter-ensayo").value;
+
+  filtered = SONDEOS.filter(s => {
+    if (q) {
+      const txt = ((s.Id_Personalizado||"")+(s.Municipio||"")+(s.Direccion||"")+(s.Eje_Perforacion||"")).toLowerCase();
+      if (!txt.includes(q)) return false;
+    }
+    if (mun && s.Municipio !== mun) return false;
+    if (ens === "spt"        && !SPT_IDS.has(s.Id)) return false;
+    if (ens === "downhole"   && !DH_IDS.has(s.Id))  return false;
+    if (ens === "atterberg"  && !ATT_IDS.has(s.Id)) return false;
+    if (ens === "colresonante" && !CR_IDS.has(s.Id)) return false;
+    if (ens === "downhole+spt" && !(DH_IDS.has(s.Id) && SPT_IDS.has(s.Id))) return false;
+    return true;
+  });
+  currentPage = 0;
+  renderTable();
+}
+
+function renderTable() {
+  const total  = filtered.length;
+  const pages  = Math.max(1, Math.ceil(total / PER_PAGE));
+  const start  = currentPage * PER_PAGE;
+  const slice  = filtered.slice(start, start + PER_PAGE);
+
+  document.getElementById("result-count").textContent = `${total.toLocaleString("es-CO")} sondeos`;
+  document.getElementById("page-info").textContent    = `Pág. ${currentPage + 1} / ${pages}`;
+  document.getElementById("prev-btn").disabled = currentPage === 0;
+  document.getElementById("next-btn").disabled = currentPage >= pages - 1;
+
+  document.getElementById("sondeo-tbody").innerHTML = slice.map(s => `
+    <tr data-id="${s.Id}">
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${s.Id_Personalizado||"—"}</td>
+      <td>${s.Municipio||"—"}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;">${s.Cota > 0 ? Number(s.Cota).toFixed(0) : "—"}</td>
+      <td>${s.Fecha ? s.Fecha.slice(0, 7) : "—"}</td>
+      <td style="font-size:11px;color:var(--text2);">${cleanEmpresa(s.Eje_Perforacion)}</td>
+      <td>${ensayoTags(s.Id)}</td>
+    </tr>`).join("");
+
+  document.querySelectorAll("#sondeo-tbody tr").forEach(tr => {
+    tr.addEventListener("click", () => showFicha(tr.dataset.id));
+  });
+}
+
+document.getElementById("search-input").addEventListener("input", applyFilters);
+document.getElementById("filter-mun").addEventListener("change", applyFilters);
+document.getElementById("filter-ensayo").addEventListener("change", applyFilters);
+document.getElementById("prev-btn").addEventListener("click", () => { currentPage--; renderTable(); });
+document.getElementById("next-btn").addEventListener("click", () => { currentPage++; renderTable(); });
+
+// ── Ficha de sondeo ──────────────────────────────────────────────────────────
+async function showFicha(id) {
+  const s = SONDEOS.find(x => x.Id === id);
+  if (!s) return;
+
+  // Switch to ficha tab
+  document.querySelectorAll(".gv-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === "ficha"));
+  document.querySelectorAll(".gv-section").forEach(s => s.classList.remove("active"));
+  document.getElementById("tab-ficha").classList.add("active");
+  document.getElementById("ficha-placeholder").style.display = "none";
+
+  const fc = document.getElementById("ficha-content");
+  fc.style.display = "block";
+  fc.innerHTML = `<div class="loading-text" style="padding:2rem;">Cargando datos del sondeo…</div>`;
+
+  // Parallel fetch de todos los ensayos de este sondeo
+  const [stratSnap, sptSnap, dhSnap, attSnap, crSnap] = await Promise.all([
+    getDocs(query(collection(db, "Estratigrafias"),      where("Id_Sondeo", "==", id))),
+    getDocs(query(collection(db, "SPT"),                 where("Id_Sondeo", "==", id))),
+    getDocs(query(collection(db, "DownHole"),            where("Id_Sondeo", "==", id))),
+    getDocs(query(collection(db, "Limites_Atterberg"),   where("Id_Sondeo", "==", id))),
+    getDocs(query(collection(db, "Col_Resonante"),       where("Id_Sondeo", "==", id))),
+  ]);
+
+  const strat = stratSnap.docs.map(d => d.data()).sort((a,b) => Number(a.NumeroCapa||0) - Number(b.NumeroCapa||0));
+  const spt   = sptSnap.docs.map(d => d.data()).sort((a,b)   => Number(a.Profundidad||0) - Number(b.Profundidad||0));
+  const dh    = dhSnap.docs.map(d => d.data()).sort((a,b)    => Number(a.Profundidad||0) - Number(b.Profundidad||0));
+  const att   = attSnap.docs.map(d => d.data()).sort((a,b)   => Number(a.Profundidad||0) - Number(b.Profundidad||0));
+  const cr    = crSnap.docs.map(d => d.data()).sort((a,b)    => Number(a.Profundidad||0) - Number(b.Profundidad||0));
+
+  fc.innerHTML = `
+    <button class="back-btn" id="back-btn">← Volver al catálogo</button>
+    <div class="ficha">
+      <div class="ficha-header">
+        <div>
+          <div class="ficha-id">${s.Id_Personalizado || "Sin ID"}</div>
+          <div class="ficha-mun">${s.Municipio || ""} · ${s.Fecha ? s.Fecha.slice(0,7) : "—"}</div>
+        </div>
+        <div style="text-align:right;">${ensayoTags(id)}</div>
+      </div>
+
+      <div class="ficha-meta">
+        <div>
+          <div class="ficha-field-label">Cota</div>
+          <div class="ficha-field-val">${s.Cota > 0 ? Number(s.Cota).toFixed(2) + " m.s.n.m" : "—"}</div>
+        </div>
+        <div>
+          <div class="ficha-field-label">Nivel freático</div>
+          <div class="ficha-field-val">${s.Nivel_freatico != null ? s.Nivel_freatico + " m" : "—"}</div>
+        </div>
+        <div>
+          <div class="ficha-field-label">Lat / Lon</div>
+          <div class="ficha-field-val">${fmtCoord(s.Coordenada_Norte)} / ${fmtCoord(s.Coordenada_Este)}</div>
+        </div>
+        <div>
+          <div class="ficha-field-label">Empresa perforación</div>
+          <div class="ficha-field-val" style="font-size:11px;">${cleanEmpresa(s.Eje_Perforacion)}</div>
+        </div>
+        <div>
+          <div class="ficha-field-label">Dirección</div>
+          <div class="ficha-field-val" style="font-size:11px;">${s.Direccion || "—"}</div>
+        </div>
+        <div>
+          <div class="ficha-field-label">Lab. dinámico</div>
+          <div class="ficha-field-val" style="font-size:11px;">${s.Eje_Lab_Dina || "—"}</div>
+        </div>
+      </div>
+
+      ${strat.length ? `
+        <div class="section-title">Estratigrafía (${strat.length} capas)</div>
+        <div style="overflow-x:auto;">
+          <table class="ensayo-table">
+            <thead><tr><th>#</th><th>Espesor (m)</th><th>Descripción geotécnica</th><th>Clasificación</th><th>Meteorización</th></tr></thead>
+            <tbody>
+              ${strat.map(c => `<tr>
+                <td>${c.NumeroCapa||"—"}</td>
+                <td>${c.Espesor != null ? Number(c.Espesor).toFixed(2) : "—"}</td>
+                <td style="font-family:inherit;font-size:11px;max-width:300px;">${c.Descripcion__GeoTec||"—"}</td>
+                <td>${c.Clasificacion_Geologica||"—"}</td>
+                <td>${c.Perfil_Meteorizacion||"—"}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>` : ""}
+
+      ${spt.length ? `
+        <div class="section-title">SPT (${spt.length} registros)</div>
+        <div style="overflow-x:auto;">
+          <table class="ensayo-table">
+            <thead><tr><th>Profundidad (m)</th><th>Valor N</th></tr></thead>
+            <tbody>
+              ${spt.map(r => `<tr>
+                <td>${r.Profundidad != null ? Number(r.Profundidad).toFixed(2) : "—"}</td>
+                <td>${r.Valor != null ? r.Valor : "—"}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>` : ""}
+
+      ${dh.length ? `
+        <div class="section-title">DownHole — Vs / Vp (${dh.length} mediciones)</div>
+        <div class="vs-wrap">${renderVsChart(dh)}</div>
+        <div style="overflow-x:auto;">
+          <table class="ensayo-table">
+            <thead><tr><th>Profundidad (m)</th><th>Vs (m/s)</th><th>Vp (m/s)</th></tr></thead>
+            <tbody>
+              ${dh.map(r => `<tr>
+                <td>${r.Profundidad != null ? Number(r.Profundidad).toFixed(2) : "—"}</td>
+                <td>${r.Vs != null ? Number(r.Vs).toFixed(0) : "—"}</td>
+                <td>${r.Vp != null ? Number(r.Vp).toFixed(0) : "—"}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>` : ""}
+
+      ${att.length ? `
+        <div class="section-title">Límites de Atterberg (${att.length} ensayos)</div>
+        <div style="overflow-x:auto;">
+          <table class="ensayo-table">
+            <thead><tr><th>Prof (m)</th><th>W (%)</th><th>LL (%)</th><th>LP (%)</th><th>USCS</th></tr></thead>
+            <tbody>
+              ${att.map(r => `<tr>
+                <td>${fmtNum(r.Profundidad, 2)}</td>
+                <td>${fmtNum(r.W, 1)}</td>
+                <td>${fmtNum(r.LL, 1)}</td>
+                <td>${fmtNum(r.LP, 1)}</td>
+                <td>${r.Clasificacion_USCS||"—"}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>` : ""}
+
+      ${cr.length ? `
+        <div class="section-title">Columna Resonante (${cr.length} registros)</div>
+        <div style="overflow-x:auto;">
+          <table class="ensayo-table">
+            <thead><tr><th>Prof (m)</th><th>Muestra</th><th>Y</th><th>G (kPa)</th><th>β</th></tr></thead>
+            <tbody>
+              ${cr.map(r => `<tr>
+                <td>${fmtNum(r.Profundidad, 2)}</td>
+                <td>${r.Numero_Muestra||"—"}</td>
+                <td>${fmtNum(r.Y, 4)}</td>
+                <td>${fmtNum(r.G, 0)}</td>
+                <td>${fmtNum(r.Beta, 4)}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>` : ""}
+
+    </div>`;
+
+  document.getElementById("back-btn").addEventListener("click", () => {
+    document.querySelectorAll(".gv-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === "catalogo"));
+    document.querySelectorAll(".gv-section").forEach(s => s.classList.remove("active"));
+    document.getElementById("tab-catalogo").classList.add("active");
+  });
+}
+
+// ── Mapa SVG ─────────────────────────────────────────────────────────────────
+function renderMap() {
+  const svg     = document.getElementById("map-svg");
+  const tt      = document.getElementById("map-tooltip");
+  const mapWrap = svg.parentElement;
+
+  const validSondeos = SONDEOS.filter(s =>
+    s.Coordenada_Norte > 4 && s.Coordenada_Norte < 8 &&
+    s.Coordenada_Este  < -70 && s.Coordenada_Este > -77
+  );
+
+  if (!validSondeos.length) {
+    svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="var(--text3)" font-size="13">No hay coordenadas válidas</text>`;
+    return;
+  }
+
+  const lats = validSondeos.map(s => Number(s.Coordenada_Norte));
+  const lons = validSondeos.map(s => Number(s.Coordenada_Este));
+  const minLat = Math.min(...lats) - 0.04;
+  const maxLat = Math.max(...lats) + 0.04;
+  const minLon = Math.min(...lons) - 0.04;
+  const maxLon = Math.max(...lons) + 0.04;
+  const W = 700, H = 500, pad = 35;
+
+  function project(lat, lon) {
+    const x = pad + (lon - minLon) / (maxLon - minLon) * (W - 2 * pad);
+    const y = H - pad - (lat - minLat) / (maxLat - minLat) * (H - 2 * pad);
+    return [x, y];
+  }
+
+  // Grid lines
+  const grid = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  for (let i = 0; i <= 4; i++) {
+    const y   = pad + i * (H - 2 * pad) / 4;
+    const lat = (maxLat - i * (maxLat - minLat) / 4).toFixed(3);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", pad); line.setAttribute("x2", W - pad);
+    line.setAttribute("y1", y);  line.setAttribute("y2", y);
+    line.setAttribute("stroke", "var(--border)"); line.setAttribute("stroke-width", "0.5");
+    const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    txt.setAttribute("x", pad - 4); txt.setAttribute("y", y + 3);
+    txt.setAttribute("font-size", "8"); txt.setAttribute("text-anchor", "end");
+    txt.setAttribute("fill", "var(--text3)"); txt.textContent = lat + "°N";
+    grid.appendChild(line); grid.appendChild(txt);
+  }
+  svg.appendChild(grid);
+
+  // Points
+  const pointsGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  pointsGroup.id = "map-points";
+
+  validSondeos.forEach(s => {
+    const [x, y] = project(Number(s.Coordenada_Norte), Number(s.Coordenada_Este));
+    const hasDH  = DH_IDS.has(s.Id);
+    const hasSPT = SPT_IDS.has(s.Id);
+    const color  = hasDH ? "var(--green)" : hasSPT ? "var(--blue)" : "#888780";
+    const filterClass = hasDH ? "f-downhole f-spt f-all" : hasSPT ? "f-spt f-all" : "f-all";
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.style.cursor = "pointer";
+    g.dataset.filter = filterClass;
+
+    const outer = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    outer.setAttribute("cx", x); outer.setAttribute("cy", y);
+    outer.setAttribute("r", "8"); outer.setAttribute("fill", color); outer.setAttribute("opacity", "0.2");
+
+    const inner = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    inner.setAttribute("cx", x); inner.setAttribute("cy", y);
+    inner.setAttribute("r", "4"); inner.setAttribute("fill", color);
+    inner.setAttribute("stroke", "white"); inner.setAttribute("stroke-width", "0.8");
+
+    g.appendChild(outer); g.appendChild(inner);
+
+    g.addEventListener("mouseenter", () => {
+      tt.style.display = "block";
+      tt.style.left = Math.min(x + 12, W - 160) + "px";
+      tt.style.top  = Math.max(y - 30, 0) + "px";
+      tt.innerHTML  = `<strong>${s.Id_Personalizado || "—"}</strong><br>
+        <span style="color:var(--text2);font-size:11px;">${s.Municipio || ""}</span><br>
+        <span style="font-size:11px;">Cota: ${s.Cota > 0 ? Number(s.Cota).toFixed(0) + " m" : "—"}</span>`;
+    });
+    g.addEventListener("mouseleave", () => { tt.style.display = "none"; });
+    g.addEventListener("click", () => showFicha(s.Id));
+
+    pointsGroup.appendChild(g);
+  });
+  svg.appendChild(pointsGroup);
+
+  // Map filter buttons
+  document.querySelectorAll(".map-filter").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".map-filter").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      mapFilter = btn.dataset.filter;
+      document.querySelectorAll("#map-points g").forEach(g => {
+        const classes = g.dataset.filter || "";
+        g.style.display = classes.includes("f-" + mapFilter) ? "" : "none";
+      });
+    });
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function groupBy(arr, key) {
+  return arr.reduce((acc, obj) => {
+    const k = obj[key] || "Desconocido";
+    (acc[k] = acc[k] || []).push(obj);
+    return acc;
+  }, {});
+}
+
+function ensayoTags(id) {
+  const tags = [];
+  if (DH_IDS.has(id))  tags.push(`<span class="tag tag-green">DownHole</span>`);
+  if (SPT_IDS.has(id)) tags.push(`<span class="tag tag-blue">SPT</span>`);
+  if (ATT_IDS.has(id)) tags.push(`<span class="tag tag-amber">Atterberg</span>`);
+  if (CR_IDS.has(id))  tags.push(`<span class="tag tag-gray">Col. Res.</span>`);
+  return tags.join("") || `<span style="color:var(--text3);font-size:11px;">—</span>`;
+}
+
+function cleanEmpresa(v) {
+  if (!v || v === "NULL") return "—";
+  return v.trim().replace(/\s+/g, " ").slice(0, 28);
+}
+
+function fmtCoord(v) {
+  if (!v) return "—";
+  return Number(v).toFixed(4);
+}
+
+function fmtNum(v, dec = 2) {
+  if (v == null || v === "") return "—";
+  const n = Number(v);
+  return isNaN(n) ? "—" : n.toFixed(dec);
+}
+
+function renderVsChart(dh) {
+  const maxVs = Math.max(...dh.map(r => Number(r.Vs || 0)), 1);
+  const maxVp = Math.max(...dh.map(r => Number(r.Vp || 0)), 1);
+  const maxVal = Math.max(maxVs, maxVp);
+  const H = 100;
+  const bars = dh.map(r => {
+    const vs = Number(r.Vs || 0);
+    const vp = Number(r.Vp || 0);
+    const hsVs = Math.round((vs / maxVal) * H);
+    const hsVp = Math.round((vp / maxVal) * H);
+    return `
+      <div class="vs-col">
+        <div style="display:flex;gap:1px;align-items:flex-end;">
+          <div class="vs-bar-vs" style="height:${hsVs}px" title="Vs: ${vs} m/s"></div>
+          <div class="vs-bar-vp" style="height:${hsVp}px" title="Vp: ${vp} m/s"></div>
+        </div>
+        <div class="vs-depth">${Number(r.Profundidad||0).toFixed(0)}</div>
+      </div>`;
+  }).join("");
+  return `<div class="vs-chart">${bars}</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:4px;">
+      <span style="color:var(--green);">█</span> Vs (m/s) &nbsp;
+      <span style="color:var(--blue);opacity:0.6;">█</span> Vp (m/s) — eje X: profundidad (m)
+    </div>`;
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+boot();
+</script>
+</body>
+</html>
