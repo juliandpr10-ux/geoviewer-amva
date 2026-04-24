@@ -401,6 +401,7 @@ let SONDEOS=[], SPT_IDS=new Set(), DH_IDS=new Set(), ATT_IDS=new Set(), CR_IDS=n
 let filtered=[], currentPage=0;
 const PER_PAGE=25;
 let leafMap=null, markers=[], mapReady=false, mapFilter="all";
+let _panelToken=0;
 
 // Clock
 setInterval(()=>{
@@ -417,7 +418,7 @@ async function boot() {
       getDocs(query(collection(db,"Limites_Atterberg"),limit(5000))),
       getDocs(query(collection(db,"Col_Resonante"),limit(5000))),
     ]);
-    SONDEOS = sS.docs.map(d=>({Id:d.id,...d.data()}));
+    SONDEOS = sS.docs.map(d=>({...d.data(), Id:d.id}));
     sptS.docs.forEach(d=>SPT_IDS.add(d.data().Id_Sondeo));
     dhS.docs.forEach(d=>DH_IDS.add(d.data().Id_Sondeo));
     attS.docs.forEach(d=>ATT_IDS.add(d.data().Id_Sondeo));
@@ -537,9 +538,10 @@ function plotMarkers(filter) {
 // Side panel
 async function openPanel(id) {
   const s=SONDEOS.find(x=>x.Id===id); if(!s) return;
+  const token=++_panelToken;
   const panel=document.getElementById("side-panel");
   panel.classList.add("open");
-  document.getElementById("sp-id").textContent=s.Id_Personalizado||"Sin ID";
+  document.getElementById("sp-id").textContent=s.Id_Personalizado||s.Id||"Sin ID";
   document.getElementById("sp-mun").textContent=(s.Municipio||"")+(s.Fecha?" · "+s.Fecha.slice(0,7):"");
   const tags=[];
   if(DH_IDS.has(id))  tags.push(`<span class="sp-tag t-g">DownHole</span>`);
@@ -547,18 +549,21 @@ async function openPanel(id) {
   if(ATT_IDS.has(id)) tags.push(`<span class="sp-tag t-a">Atterberg</span>`);
   if(CR_IDS.has(id))  tags.push(`<span class="sp-tag t-gr">Col. Res.</span>`);
   document.getElementById("sp-tags").innerHTML=tags.join("")||`<span style="font-size:10px;color:var(--text3);font-family:'Share Tech Mono',monospace;">Solo estratigrafía</span>`;
+  const cotaVal=(s.Cota!=null&&s.Cota!=="")?Number(s.Cota).toFixed(2)+" m":"—";
   document.getElementById("sp-meta").innerHTML=[
-    ["Cota",s.Cota>0?Number(s.Cota).toFixed(2)+" m":"—"],
-    ["N. freático",s.Nivel_freatico!=null?s.Nivel_freatico+" m":"—"],
-    ["Lat",s.Coordenada_Norte?Number(s.Coordenada_Norte).toFixed(5):"—"],
-    ["Lon",s.Coordenada_Este?Number(s.Coordenada_Este).toFixed(5):"—"],
+    ["Cota",cotaVal],
+    ["N. freático",s.Nivel_freatico!=null&&s.Nivel_freatico!==""?Number(s.Nivel_freatico).toFixed(2)+" m":"—"],
+    ["Lat",s.Coordenada_Norte!=null?Number(s.Coordenada_Norte).toFixed(5):"—"],
+    ["Lon",s.Coordenada_Este!=null?Number(s.Coordenada_Este).toFixed(5):"—"],
     ["Perforación",(s.Eje_Perforacion||"—").slice(0,22)],
     ["Lab. Dinám.",(s.Eje_Lab_Dina||"—").slice(0,22)],
   ].map(([l,v])=>`<div class="sp-field"><div class="sp-field-label">${l}</div><div class="sp-field-val">${v}</div></div>`).join("");
 
   const body=document.getElementById("sp-body");
+  body.scrollTop=0;
   body.innerHTML=`<div class="sp-loading">CARGANDO…</div>`;
 
+  try {
   const idP=s.Id_Proyecto||null;
   const [stS,sptS,dhS,attS,crS,linS]=await Promise.all([
     getDocs(query(collection(db,"Estratigrafias"),where("Id_Sondeo","==",id))),
@@ -568,6 +573,7 @@ async function openPanel(id) {
     getDocs(query(collection(db,"Col_Resonante"),where("Id_Sondeo","==",id))),
     idP?getDocs(query(collection(db,"Lin_Sismicas"),where("Id_Proyecto","==",idP))):Promise.resolve({docs:[]}),
   ]);
+  if(token!==_panelToken) return;
   const strat=stS.docs.map(d=>d.data()).sort((a,b)=>Number(a.NumeroCapa||0)-Number(b.NumeroCapa||0));
   const spt  =sptS.docs.map(d=>d.data()).sort((a,b)=>Number(a.Profundidad||0)-Number(b.Profundidad||0));
   const dh   =dhS.docs.map(d=>d.data()).sort((a,b)=>Number(a.Profundidad||0)-Number(b.Profundidad||0));
@@ -639,6 +645,9 @@ async function openPanel(id) {
   }
   if(!h) h=`<div style="color:var(--text3);font-size:11px;font-family:'Share Tech Mono',monospace;padding:12px 0;">Sin ensayos registrados.</div>`;
   body.innerHTML=h;
+  } catch(e) {
+    if(token===_panelToken) body.innerHTML=`<div style="color:#ff4466;font-size:11px;font-family:'Share Tech Mono',monospace;padding:12px 0;">ERROR: ${e.message}</div>`;
+  }
 }
 
 document.getElementById("sp-close").addEventListener("click",()=>{
