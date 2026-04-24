@@ -525,12 +525,16 @@ async function showFicha(id) {
   fc.innerHTML = `<div class="loading-text" style="padding:2rem;">Cargando datos del sondeo…</div>`;
 
   // Parallel fetch de todos los ensayos de este sondeo
-  const [stratSnap, sptSnap, dhSnap, attSnap, crSnap] = await Promise.all([
+  const idProyecto = s.Id_Proyecto || null;
+  const [stratSnap, sptSnap, dhSnap, attSnap, crSnap, linSnap] = await Promise.all([
     getDocs(query(collection(db, "Estratigrafias"),      where("Id_Sondeo", "==", id))),
     getDocs(query(collection(db, "SPT"),                 where("Id_Sondeo", "==", id))),
     getDocs(query(collection(db, "DownHole"),            where("Id_Sondeo", "==", id))),
     getDocs(query(collection(db, "Limites_Atterberg"),   where("Id_Sondeo", "==", id))),
     getDocs(query(collection(db, "Col_Resonante"),       where("Id_Sondeo", "==", id))),
+    idProyecto
+      ? getDocs(query(collection(db, "Lin_Sismicas"), where("Id_Proyecto", "==", idProyecto)))
+      : Promise.resolve({ docs: [] }),
   ]);
 
   const strat = stratSnap.docs.map(d => d.data()).sort((a,b) => Number(a.NumeroCapa||0) - Number(b.NumeroCapa||0));
@@ -538,6 +542,7 @@ async function showFicha(id) {
   const dh    = dhSnap.docs.map(d => d.data()).sort((a,b)    => Number(a.Profundidad||0) - Number(b.Profundidad||0));
   const att   = attSnap.docs.map(d => d.data()).sort((a,b)   => Number(a.Profundidad||0) - Number(b.Profundidad||0));
   const cr    = crSnap.docs.map(d => d.data()).sort((a,b)    => Number(a.Profundidad||0) - Number(b.Profundidad||0));
+  const lineas = linSnap.docs.map(d => d.data());
 
   fc.innerHTML = `
     <button class="back-btn" id="back-btn">← Volver al catálogo</button>
@@ -656,6 +661,30 @@ async function showFicha(id) {
               </tr>`).join("")}
             </tbody>
           </table>
+        </div>` : ""}
+
+
+      ${lineas.length ? `
+        <div class="section-title">Líneas sísmicas del proyecto (${lineas.length})</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:1rem;">
+          ${lineas.map(l => {
+            const rawRuta = l.RutaImagen || "";
+            const numMatch = rawRuta.match(/(\d+)\.(?:png|PNG)$/i);
+            const imgNum = numMatch ? numMatch[1] : null;
+            const imgUrl = imgNum ? `images/${imgNum}.png` : null;
+            const tipo = Number(imgNum) <= 22 ? "Tomografía resistividad" : "Perfil Vs";
+            return `<div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--bg2);">
+              <div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text2);">${l.Nombre||"Línea"}</span>
+                <span style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg);color:var(--text3);border:1px solid var(--border);">${tipo}</span>
+              </div>
+              ${imgUrl
+                ? `<img src="${imgUrl}" alt="${l.Nombre||''}" class="tomo-img" style="width:100%;display:block;" loading="lazy">`
+                : `<div class="img-placeholder">Sin imagen vinculada</div>`
+              }
+              ${l.Obsevaciones ? `<div style="padding:6px 10px;font-size:10px;color:var(--text3);">${l.Obsevaciones}</div>` : ""}
+            </div>`;
+          }).join("")}
         </div>` : ""}
 
     </div>`;
