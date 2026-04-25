@@ -92,9 +92,17 @@
     .metric-card { background: rgba(5,21,37,0.72); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; position: relative; overflow: hidden; transition: box-shadow 0.25s, transform 0.2s; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(0,255,136,0.06); }
     .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, var(--neon), transparent 70%); opacity: 0.6; }
     .metric-card:hover { box-shadow: 0 6px 32px rgba(0,255,136,0.12), 0 0 0 1px rgba(0,255,136,0.18); transform: translateY(-1px); }
-    .metric-label { font-family: var(--mono); font-size: 0.75rem; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+    .metric-active { border-color: var(--neon) !important; box-shadow: 0 0 0 1px var(--neon), 0 6px 32px rgba(0,255,136,0.18) !important; }
+    .metric-card[data-filter] { cursor: pointer; }
+    .bar-active .bar-label { color: var(--neon) !important; }
+    .bar-active .bar-fill { box-shadow: 0 0 10px rgba(0,255,136,0.7) !important; }
+    .bar-active { background: rgba(0,255,136,0.04); border-radius: 4px; }
+    .year-col-active .year-bar { filter: brightness(1.6) !important; box-shadow: 0 0 8px rgba(0,255,136,0.6) !important; }
+    .ensayo-item[data-filter] { cursor: pointer; }
+    .ensayo-item.metric-active { border-color: var(--neon) !important; }
+    .metric-label { font-family: var(--mono); font-size: 0.9rem; color: #cbd5e1; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
     .metric-value { font-family: var(--mono); font-size: 2.6rem; font-weight: 700; color: var(--neon); text-shadow: var(--glow); line-height: 1; }
-    .metric-sub { font-size: 0.85rem; color: var(--text3); margin-top: 5px; }
+    .metric-sub { font-size: 0.82rem; color: #94a3b8; margin-top: 5px; }
     .mv2 { color: var(--neon2); text-shadow: var(--glow2); }
     .mv3 { color: var(--neon3); text-shadow: 0 0 12px rgba(255,170,0,0.5); }
 
@@ -106,9 +114,9 @@
 
     .chart-panel { background: rgba(5,21,37,0.72); border: 1px solid rgba(0,204,255,0.14); border-radius: 10px; padding: 14px 16px; position: relative; flex-shrink: 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(0,204,255,0.06); }
     .chart-panel::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, var(--neon2), transparent 70%); opacity: 0.5; border-radius: 10px 10px 0 0; }
-    .panel-title { font-family: var(--mono); font-size: 0.75rem; color: var(--neon2); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; text-shadow: 0 0 8px rgba(0,204,255,0.3); }
+    .panel-title { font-family: var(--mono); font-size: 0.85rem; color: var(--neon2); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 12px; text-shadow: 0 0 8px rgba(0,204,255,0.3); }
     .bar-item { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-    .bar-label { width: 100px; font-size: 0.85rem; color: var(--text2); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-label { width: 100px; font-size: 0.85rem; color: #cbd5e1; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bar-track { flex: 1; height: 5px; background: rgba(0,255,136,0.07); border-radius: 2px; overflow: hidden; }
     .bar-fill { height: 100%; background: linear-gradient(90deg, var(--neon), rgba(0,255,136,0.4)); border-radius: 2px; box-shadow: 0 0 5px rgba(0,255,136,0.4); }
     .bar-count { width: 32px; font-family: var(--mono); font-size: 0.85rem; color: var(--neon); text-align: right; }
@@ -116,14 +124,14 @@
     .year-col { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; cursor: default; }
     .year-bar { width: 100%; background: linear-gradient(180deg, var(--neon), rgba(0,255,136,0.25)); border-radius: 2px 2px 0 0; min-height: 2px; box-shadow: 0 0 5px rgba(0,255,136,0.3); transition: filter 0.15s; }
     .year-col:hover .year-bar { filter: brightness(1.35); }
-    .year-lbl { font-size: 0.72rem; color: var(--text2); transform: rotate(-50deg) translateX(2px); transform-origin: top center; font-family: var(--mono); white-space: nowrap; margin-top: 4px; }
+    .year-lbl { font-size: 0.8rem; color: #cbd5e1; transform: rotate(-50deg) translateX(2px); transform-origin: top center; font-family: var(--mono); white-space: nowrap; margin-top: 4px; }
     .year-avg-line { position: absolute; left: 32px; right: 0; height: 1px; background: rgba(255,170,0,0.5); pointer-events: none; }
     .year-avg-label { position: absolute; right: 0; font-family: var(--mono); font-size: 0.72rem; color: var(--neon3); }
     .year-best-bar { background: linear-gradient(180deg, var(--neon3), rgba(255,170,0,0.3)) !important; box-shadow: 0 0 8px rgba(255,170,0,0.5) !important; }
-    .y-tick { font-family: var(--mono); font-size: 0.72rem; color: var(--text3); }
+    .y-tick { font-family: var(--mono); font-size: 0.82rem; color: #94a3b8; }
     .ensayo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .ensayo-item { background: var(--bg3); border: 1px solid var(--border2); border-radius: 5px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; }
-    .ensayo-name { font-size: 0.85rem; color: var(--text2); }
+    .ensayo-name { font-size: 0.88rem; color: #cbd5e1; }
     .ensayo-count { font-family: var(--mono); font-size: 1.2rem; color: var(--neon2); text-shadow: var(--glow2); }
 
     /* MAPA */
@@ -135,12 +143,13 @@
     .leaflet-control-zoom a:hover { background: rgba(0,255,136,0.12) !important; }
     .leaflet-control-attribution { background: rgba(2,11,20,0.8) !important; color: var(--text3) !important; font-size: 9px !important; }
     .leaflet-control-attribution a { color: var(--text3) !important; }
+    .leaflet-top.leaflet-right { z-index: 800 !important; }
     .leaflet-tooltip { padding: 0 !important; border: none !important; background: none !important; box-shadow: none !important; }
-    #map-hud { position: absolute; top: 14px; left: 14px; z-index: 500; display: flex; flex-direction: column; gap: 8px; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
-    #map-hud.collapsed { transform: translateX(calc(-100% - 14px)); }
-    #hud-toggle { position: absolute; top: 14px; left: 14px; z-index: 501; background: rgba(2,11,20,0.85); border: 1px solid var(--border); border-radius: 0 6px 6px 0; color: var(--neon); font-family: var(--mono); font-size: 0.78rem; padding: 8px 6px; cursor: pointer; writing-mode: vertical-rl; text-orientation: mixed; backdrop-filter: blur(12px); transition: left 0.3s cubic-bezier(0.4,0,0.2,1), background 0.15s; white-space: nowrap; letter-spacing: 0.06em; }
-    #hud-toggle:hover { background: rgba(0,255,136,0.1); }
-    #map-hud:not(.collapsed) ~ #hud-toggle { left: calc(14px + var(--hud-w,160px)); }
+    #hud-wrapper { position: absolute; top: 14px; left: 14px; z-index: 500; display: flex; flex-direction: row; align-items: stretch; }
+    #map-hud { display: flex; flex-direction: column; gap: 8px; max-width: 240px; overflow: hidden; transition: max-width 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.25s; }
+    #map-hud.collapsed { max-width: 0; opacity: 0; pointer-events: none; }
+    #hud-toggle { width: 22px; min-width: 22px; display: flex; align-items: center; justify-content: center; background: rgba(2,11,20,0.85); border: 1px solid var(--border); border-left: none; border-radius: 0 8px 8px 0; color: var(--neon); font-family: var(--mono); font-size: 0.9rem; cursor: pointer; backdrop-filter: blur(12px); transition: background 0.15s; }
+    #hud-toggle:hover { background: rgba(0,255,136,0.12); }
     .hud-panel { background: rgba(2,11,20,0.82); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(0,255,136,0.05); }
     .hud-title { font-family: var(--mono); font-size: 0.75rem; color: var(--neon); letter-spacing: 0.1em; margin-bottom: 9px; text-shadow: var(--glow); }
     .f-btn { display: flex; align-items: center; gap: 8px; width: 100%; font-family: var(--mono); font-size: 0.85rem; padding: 7px 10px; border: 1px solid var(--border); border-radius: 3px; background: transparent; color: var(--text2); cursor: pointer; margin-bottom: 4px; transition: all 0.2s; letter-spacing: 0.04em; }
@@ -160,7 +169,7 @@
     #clear-selection-btn.visible { display: inline-flex; align-items: center; gap: 4px; }
 
     /* SIDE PANEL */
-    #side-panel { position: absolute; top: 0; right: -430px; width: 430px; height: 100%; background: rgba(2,11,20,0.88); border-left: 1px solid var(--border); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); z-index: 600; display: flex; flex-direction: column; overflow: hidden; transition: right 0.35s cubic-bezier(0.4,0,0.2,1); box-shadow: -4px 0 32px rgba(0,0,0,0.6), inset 1px 0 0 rgba(0,255,136,0.07); }
+    #side-panel { position: absolute; top: 0; right: -430px; width: 430px; height: 100%; background: rgba(2,11,20,0.88); border-left: 1px solid var(--border); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); z-index: 900; display: flex; flex-direction: column; overflow: hidden; transition: right 0.35s cubic-bezier(0.4,0,0.2,1); box-shadow: -4px 0 32px rgba(0,0,0,0.6), inset 1px 0 0 rgba(0,255,136,0.07); }
     #side-panel.open { right: 0; }
     .sp-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; flex-shrink: 0; background: linear-gradient(135deg, rgba(0,255,136,0.04), transparent); }
     .sp-id { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--neon); text-shadow: var(--glow); }
@@ -264,8 +273,12 @@
     <div class="metric-row" id="metric-grid"></div>
     <div class="dash-mid-row">
       <div class="dash-map-panel">
-        <div class="panel-title">DISTRIBUCIÓN GEOGRÁFICA — clic en punto para filtrar</div>
+        <div class="panel-title">DISTRIBUCIÓN GEOGRÁFICA — clic en punto o métrica para filtrar</div>
         <div id="dash-map"></div>
+        <div id="dash-metric-badge" style="display:none;position:absolute;bottom:12px;left:12px;z-index:10;background:rgba(2,11,20,0.9);border:1px solid var(--neon2);border-radius:6px;padding:5px 12px;align-items:center;gap:10px;font-family:var(--mono);font-size:0.78rem;color:var(--neon2);backdrop-filter:blur(10px);">
+          <span id="dash-metric-label"></span>
+          <button id="dash-metric-reset" style="background:none;border:1px solid var(--neon2);color:var(--neon2);padding:2px 8px;border-radius:3px;cursor:pointer;font-family:var(--mono);font-size:0.75rem;">✕ Limpiar filtro</button>
+        </div>
       </div>
       <div class="dash-charts-col">
         <div class="chart-panel">
@@ -291,22 +304,24 @@
 
   <section id="tab-mapa" class="gv-section">
     <div id="map"></div>
-    <button id="hud-toggle" title="Mostrar/ocultar filtros">◀</button>
-    <div id="map-hud">
-      <div class="hud-panel">
-        <div class="hud-title">FILTRAR</div>
-        <button class="f-btn active" data-filter="all"><span class="f-dot" style="background:#888;box-shadow:0 0 5px #888;"></span>TODOS</button>
-        <button class="f-btn" data-filter="downhole"><span class="f-dot" style="background:#00ff88;box-shadow:0 0 6px #00ff88;"></span>DOWNHOLE</button>
-        <button class="f-btn" data-filter="spt"><span class="f-dot" style="background:#00ccff;box-shadow:0 0 6px #00ccff;"></span>SPT</button>
-        <button class="f-btn" data-filter="atterberg"><span class="f-dot" style="background:#ffaa00;box-shadow:0 0 6px #ffaa00;"></span>ATTERBERG</button>
+    <div id="hud-wrapper">
+      <div id="map-hud">
+        <div class="hud-panel">
+          <div class="hud-title">FILTRAR</div>
+          <button class="f-btn active" data-filter="all"><span class="f-dot" style="background:#888;box-shadow:0 0 5px #888;"></span>TODOS</button>
+          <button class="f-btn" data-filter="downhole"><span class="f-dot" style="background:#00ff88;box-shadow:0 0 6px #00ff88;"></span>DOWNHOLE</button>
+          <button class="f-btn" data-filter="spt"><span class="f-dot" style="background:#00ccff;box-shadow:0 0 6px #00ccff;"></span>SPT</button>
+          <button class="f-btn" data-filter="atterberg"><span class="f-dot" style="background:#ffaa00;box-shadow:0 0 6px #ffaa00;"></span>ATTERBERG</button>
+        </div>
+        <div class="hud-panel">
+          <div class="hud-title">LEYENDA</div>
+          <div class="legend-row"><div class="l-dot" style="background:#00ff88;box-shadow:0 0 6px #00ff88;"></div><span>DownHole</span></div>
+          <div class="legend-row"><div class="l-dot" style="background:#00ccff;box-shadow:0 0 6px #00ccff;"></div><span>Solo SPT</span></div>
+          <div class="legend-row"><div class="l-dot" style="background:#ffaa00;box-shadow:0 0 6px #ffaa00;"></div><span>Atterberg</span></div>
+          <div class="legend-row"><div class="l-dot" style="background:#555;"></div><span>Solo estrat.</span></div>
+        </div>
       </div>
-      <div class="hud-panel">
-        <div class="hud-title">LEYENDA</div>
-        <div class="legend-row"><div class="l-dot" style="background:#00ff88;box-shadow:0 0 6px #00ff88;"></div><span>DownHole</span></div>
-        <div class="legend-row"><div class="l-dot" style="background:#00ccff;box-shadow:0 0 6px #00ccff;"></div><span>Solo SPT</span></div>
-        <div class="legend-row"><div class="l-dot" style="background:#ffaa00;box-shadow:0 0 6px #ffaa00;"></div><span>Atterberg</span></div>
-        <div class="legend-row"><div class="l-dot" style="background:#555;"></div><span>Solo estrat.</span></div>
-      </div>
+      <button id="hud-toggle" title="Mostrar/ocultar filtros">◀</button>
     </div>
     <div id="map-counter">
       <div class="counter-box">
@@ -373,7 +388,7 @@ let SONDEOS=[], SPT_IDS=new Set(), DH_IDS=new Set(), ATT_IDS=new Set(), CR_IDS=n
 let filtered=[], currentPage=0;
 const PER_PAGE=25;
 let leafMap=null, markers=[], mapReady=false, mapFilter="all", selectedMarkerId=null;
-let dashMap=null, dashMarkers=[], dashFilterMun=null;
+let dashMap=null, dashMarkers=[], dashFilterMun=null, dashMetricFilter=null;
 let _panelToken=0;
 
 setInterval(()=>{
@@ -428,28 +443,35 @@ function renderDashboard(munFilter) {
   const attF = munFilter ? new Set([...ATT_IDS].filter(id=>ids.has(id))) : ATT_IDS;
   const crF  = munFilter ? new Set([...CR_IDS].filter(id=>ids.has(id)))  : CR_IDS;
   const byMun = groupBy(src,"Municipio");
+  const mf = dashMetricFilter;
 
-  document.getElementById("metric-grid").innerHTML=[
-    {l:"SONDEOS",    v:src.length,               s:"geotécnicos",    c:""},
-    {l:"MUNICIPIOS", v:Object.keys(byMun).length, s:"Valle de Aburrá",c:""},
-    {l:"DOWNHOLE",   v:dhF.size,                  s:"medición Vs/Vp", c:"mv2"},
-    {l:"SPT",        v:sptF.size,                 s:"sondeos con SPT",c:"mv2"},
-    {l:"ATTERBERG",  v:attF.size,                 s:"con límites",    c:"mv3"},
-    {l:"COL. RES.",  v:crF.size,                  s:"ensayos dinám.", c:"mv3"},
-  ].map(m=>`<div class="metric-card"><div class="metric-label">${m.l}</div><div class="metric-value ${m.c}">${m.v.toLocaleString("es-CO")}</div><div class="metric-sub">${m.s}</div></div>`).join("");
+  const metricDefs=[
+    {l:"SONDEOS",    v:src.length,               s:"geotécnicos",    c:"",    f:null},
+    {l:"MUNICIPIOS", v:Object.keys(byMun).length, s:"Valle de Aburrá",c:"",    f:null},
+    {l:"DOWNHOLE",   v:dhF.size,                  s:"medición Vs/Vp", c:"mv2", f:"downhole"},
+    {l:"SPT",        v:sptF.size,                 s:"sondeos con SPT",c:"mv2", f:"spt"},
+    {l:"ATTERBERG",  v:attF.size,                 s:"con límites",    c:"mv3", f:"atterberg"},
+    {l:"COL. RES.",  v:crF.size,                  s:"ensayos dinám.", c:"mv3", f:"colres"},
+  ];
+  document.getElementById("metric-grid").innerHTML=metricDefs.map(m=>{
+    const active=mf&&mf.type===m.f&&m.f;
+    return `<div class="metric-card${active?' metric-active':''}"${m.f?` data-filter="${m.f}"`:""}><div class="metric-label">${m.l}</div><div class="metric-value ${m.c}">${m.v.toLocaleString("es-CO")}</div><div class="metric-sub">${m.s}</div></div>`;
+  }).join("");
 
   const sorted=Object.entries(byMun).sort((a,b)=>b[1].length-a[1].length);
   const maxM=sorted[0]?.[1]?.length||1;
-  document.getElementById("mun-bars").innerHTML=sorted.slice(0,12).map(([m,s])=>`
-    <div class="bar-item">
+  document.getElementById("mun-bars").innerHTML=sorted.slice(0,12).map(([m,s])=>{
+    const active=mf&&mf.type==='municipio'&&mf.value===m;
+    return `<div class="bar-item${active?' bar-active':''}" data-municipio="${m}">
       <span class="bar-label">${m||"—"}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${(s.length/maxM*100).toFixed(0)}%"></div></div>
       <span class="bar-count">${s.length}</span>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 
   const byYear={};
   src.forEach(s=>{if(s.Fecha){const y=s.Fecha.slice(0,4);byYear[y]=(byYear[y]||0)+1;}});
-  const ye=Object.entries(byYear).sort((a,b)=>a[0].localeCompare(b[0]));
+  const ye=Object.entries(byYear).filter(([y])=>Number(y)>=1980).sort((a,b)=>a[0].localeCompare(b[0]));
   const maxY=Math.max(...ye.map(e=>e[1]),1);
   const avgY=ye.length?Math.round(ye.reduce((s,[,c])=>s+c,0)/ye.length):0;
   const bestYear=ye.reduce((best,cur)=>cur[1]>best[1]?cur:best,["",0]);
@@ -474,15 +496,22 @@ function renderDashboard(munFilter) {
     const yAxis=document.getElementById("year-y-axis");
     if(yAxis) yAxis.innerHTML=[maxY,Math.round(maxY/2),0].map(v=>`<span class="y-tick">${v}</span>`).join("");
   }
-  document.getElementById("year-bars").innerHTML=ye.map(([y,c])=>`
-    <div class="year-col" title="${y}: ${c} sondeos${y===bestYear[0]?" ★ máximo":""}">
-      <div class="year-bar${y===bestYear[0]?" year-best-bar":""}" style="height:${Math.round(c/maxY*70)}px"></div>
+  document.getElementById("year-bars").innerHTML=ye.map(([y,c])=>{
+    const active=mf&&mf.type==='year'&&mf.value===y;
+    return `<div class="year-col${active?' year-col-active':''}" data-year="${y}" title="${y}: ${c} sondeos${y===bestYear[0]?' ★ máximo':''}">
+      <div class="year-bar${y===bestYear[0]?' year-best-bar':''}" style="height:${Math.round(c/maxY*70)}px"></div>
       <span class="year-lbl">${y}</span>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 
+  const ensayoFMap={DownHole:"downhole",SPT:"spt",Atterberg:"atterberg","Col. Res.":"colres"};
   document.getElementById("ensayo-grid").innerHTML=[
     ["DownHole",dhF.size],["SPT",sptF.size],["Atterberg",attF.size],["Col. Res.",crF.size]
-  ].map(([n,c])=>`<div class="ensayo-item"><span class="ensayo-name">${n}</span><span class="ensayo-count">${c}</span></div>`).join("");
+  ].map(([n,c])=>{
+    const ft=ensayoFMap[n];
+    const active=mf&&mf.type===ft;
+    return `<div class="ensayo-item${active?' metric-active':''}" data-filter="${ft}"><span class="ensayo-name">${n}</span><span class="ensayo-count">${c}</span></div>`;
+  }).join("");
 }
 
 function initDashMap() {
@@ -493,11 +522,24 @@ function initDashMap() {
   setTimeout(()=>dashMap.invalidateSize(),150);
 }
 
+function sondeoMatchesDashFilter(s) {
+  if(dashFilterMun&&s.Municipio!==dashFilterMun) return false;
+  if(!dashMetricFilter) return true;
+  const{type,value}=dashMetricFilter;
+  if(type==='downhole')  return DH_IDS.has(s.Id);
+  if(type==='spt')       return SPT_IDS.has(s.Id);
+  if(type==='atterberg') return ATT_IDS.has(s.Id);
+  if(type==='colres')    return CR_IDS.has(s.Id);
+  if(type==='municipio') return s.Municipio===value;
+  if(type==='year')      return s.Fecha&&s.Fecha.slice(0,4)===value;
+  return true;
+}
+
 function plotDashMarkers() {
   dashMarkers.forEach(m=>dashMap.removeLayer(m)); dashMarkers=[];
   SONDEOS.filter(s=>s.Coordenada_Norte>4&&s.Coordenada_Norte<8&&s.Coordenada_Este>-77&&s.Coordenada_Este<-70).forEach(s=>{
     const {c,g}=markerColor(s);
-    const active=!dashFilterMun||s.Municipio===dashFilterMun;
+    const active=sondeoMatchesDashFilter(s);
     const icon=L.divIcon({className:"",
       html:`<div style="width:9px;height:9px;border-radius:50%;background:${active?c:"#2a4a5a"};box-shadow:${active?`0 0 8px ${g}`:"none"};border:1px solid rgba(255,255,255,0.12);cursor:pointer;opacity:${active?1:0.35};transition:all 0.2s;"></div>`,
       iconSize:[9,9],iconAnchor:[4,4]});
@@ -526,6 +568,46 @@ document.getElementById("dash-filter-reset").addEventListener("click",()=>{
   document.getElementById("dash-filter-badge").classList.remove("visible");
   renderDashboard(null);
   plotDashMarkers();
+});
+
+function setDashMetricFilter(type,value,label){
+  if(dashMetricFilter&&dashMetricFilter.type===type&&dashMetricFilter.value===value){
+    dashMetricFilter=null;
+    document.getElementById("dash-metric-badge").style.display="none";
+  } else {
+    dashMetricFilter={type,value};
+    document.getElementById("dash-metric-label").textContent=label;
+    document.getElementById("dash-metric-badge").style.display="flex";
+  }
+  renderDashboard(dashFilterMun);
+  plotDashMarkers();
+}
+document.getElementById("dash-metric-reset").addEventListener("click",()=>{
+  dashMetricFilter=null;
+  document.getElementById("dash-metric-badge").style.display="none";
+  renderDashboard(dashFilterMun);
+  plotDashMarkers();
+});
+document.getElementById("metric-grid").addEventListener("click",e=>{
+  const card=e.target.closest("[data-filter]");
+  if(!card||!card.dataset.filter) return;
+  setDashMetricFilter(card.dataset.filter,null,card.querySelector(".metric-label").textContent);
+});
+document.getElementById("mun-bars").addEventListener("click",e=>{
+  const item=e.target.closest("[data-municipio]");
+  if(!item) return;
+  const m=item.dataset.municipio;
+  setDashMetricFilter("municipio",m,"MUNICIPIO: "+m);
+});
+document.getElementById("year-bars").addEventListener("click",e=>{
+  const col=e.target.closest("[data-year]");
+  if(!col) return;
+  setDashMetricFilter("year",col.dataset.year,"AÑO: "+col.dataset.year);
+});
+document.getElementById("ensayo-grid").addEventListener("click",e=>{
+  const item=e.target.closest("[data-filter]");
+  if(!item||!item.dataset.filter) return;
+  setDashMetricFilter(item.dataset.filter,null,item.querySelector(".ensayo-name").textContent.toUpperCase());
 });
 
 function initMap() {
@@ -762,9 +844,7 @@ function renderTable() {
 document.getElementById("hud-toggle").addEventListener("click",()=>{
   const hud=document.getElementById("map-hud");
   const btn=document.getElementById("hud-toggle");
-  const collapsed=hud.classList.toggle("collapsed");
-  btn.textContent=collapsed?"▶":"◀";
-  btn.style.left=collapsed?"14px":"";
+  btn.textContent=hud.classList.toggle("collapsed")?"▶":"◀";
 });
 
 document.getElementById("search-input").addEventListener("input",applyFilters);
