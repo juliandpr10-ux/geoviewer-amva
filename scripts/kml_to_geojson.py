@@ -1,5 +1,12 @@
-import json, xml.etree.ElementTree as ET
+import json, re, xml.etree.ElementTree as ET
 from pathlib import Path
+
+def strip_ns(content):
+    content = re.sub(r'<(\w+:)', '<', content)
+    content = re.sub(r'</(\w+:)', '</', content)
+    content = re.sub(r'\s+xmlns(?::\w+)?="[^"]*"', '', content)
+    content = re.sub(r'\s+\w+:\w+="[^"]*"', '', content)
+    return content
 
 def parse_coord_string(s):
     coords = []
@@ -10,27 +17,32 @@ def parse_coord_string(s):
     return coords
 
 def kml_to_geojson(kml_path):
-    tree = ET.parse(kml_path)
-    root = tree.getroot()
+    raw = Path(kml_path).read_text(encoding='utf-8', errors='replace')
+    raw = strip_ns(raw)
+    root = ET.fromstring(raw)
     features = []
 
-    for pm in root.iter('{http://www.opengis.net/kml/2.2}Placemark'):
-        name_el = pm.find('{http://www.opengis.net/kml/2.2}name')
+    for pm in root.iter('Placemark'):
+        name_el = pm.find('name')
         name = name_el.text if name_el is not None else ''
         props = {'name': name}
 
-        for el in pm.iter('{http://www.opengis.net/kml/2.2}Point'):
-            c = parse_coord_string(el.find('{http://www.opengis.net/kml/2.2}coordinates').text)
-            if c:
-                features.append({'type':'Feature','properties':props,'geometry':{'type':'Point','coordinates':c[0]}})
+        for el in pm.iter('Point'):
+            coord_el = el.find('coordinates')
+            if coord_el is not None:
+                c = parse_coord_string(coord_el.text)
+                if c:
+                    features.append({'type':'Feature','properties':props,'geometry':{'type':'Point','coordinates':c[0]}})
 
-        for el in pm.iter('{http://www.opengis.net/kml/2.2}LineString'):
-            c = parse_coord_string(el.find('{http://www.opengis.net/kml/2.2}coordinates').text)
-            if c:
-                features.append({'type':'Feature','properties':props,'geometry':{'type':'LineString','coordinates':c}})
+        for el in pm.iter('LineString'):
+            coord_el = el.find('coordinates')
+            if coord_el is not None:
+                c = parse_coord_string(coord_el.text)
+                if c:
+                    features.append({'type':'Feature','properties':props,'geometry':{'type':'LineString','coordinates':c}})
 
-        for el in pm.iter('{http://www.opengis.net/kml/2.2}Polygon'):
-            outer = el.find('.//{http://www.opengis.net/kml/2.2}outerBoundaryIs//{http://www.opengis.net/kml/2.2}coordinates')
+        for el in pm.iter('Polygon'):
+            outer = el.find('.//outerBoundaryIs//coordinates')
             if outer is not None:
                 c = parse_coord_string(outer.text)
                 if c:
