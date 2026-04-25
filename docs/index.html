@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.3.1/leaflet-omnivore.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -239,6 +240,7 @@
 <div id="app">
   <header id="header">
     <div class="logo">
+      <img src="Logo_AMVA.png" style="height:48px; margin-right:12px; filter: brightness(0) saturate(100%) invert(47%) sepia(98%) saturate(400%) hue-rotate(60deg) brightness(95%);">
       <div class="logo-icon">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <circle cx="8" cy="8" r="2.5" stroke="#00ff88" stroke-width="1"/>
@@ -247,8 +249,8 @@
         </svg>
       </div>
       <div>
-        <div class="logo-title">GEOVIEWER · AMVA</div>
-        <div class="logo-sub">MICROZONIFICACIÓN SÍSMICA — VALLE DE ABURRÁ</div>
+        <div class="logo-title">Base de Datos Geotécnica</div>
+        <div class="logo-sub">Microzonificación Sísmica – Área Metropolitana del Valle de Aburrá</div>
       </div>
     </div>
     <div class="nav-tabs">
@@ -261,7 +263,6 @@
         <div class="live-dot" id="live-dot"></div>
         <span id="live-status">CONECTANDO</span>
       </div>
-      <div class="clock" id="clock">--:--:--</div>
     </div>
   </header>
 
@@ -390,10 +391,6 @@ const PER_PAGE=25;
 let leafMap=null, markers=[], mapReady=false, mapFilter="all", selectedMarkerId=null;
 let dashMap=null, dashMarkers=[], dashFilterMun=null, dashMetricFilter=null;
 let _panelToken=0;
-
-setInterval(()=>{
-  document.getElementById("clock").textContent = new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-},1000);
 
 async function boot() {
   try {
@@ -622,6 +619,13 @@ function initMap() {
       btn.classList.add("active"); mapFilter=btn.dataset.filter; plotMarkers(mapFilter);
     });
   });
+  var kmlLayers = {
+    "Microzonificación AMVA 2016": omnivore.kml('MicroAMVA_2016.kml').addTo(leafMap),
+    "Geomorfología": omnivore.kml('Geomorfologia.kml'),
+    "Límite Urbano": omnivore.kml('Limite_urbano.kml'),
+    "Líneas Sísmicas": omnivore.kml('Lineas_Sismicas.kml').addTo(leafMap)
+  };
+  L.control.layers(null, kmlLayers, {collapsed: false, position: 'topright'}).addTo(leafMap);
 }
 
 function markerColor(s) {
