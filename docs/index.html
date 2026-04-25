@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.3.1/leaflet-omnivore.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -619,13 +618,32 @@ function initMap() {
       btn.classList.add("active"); mapFilter=btn.dataset.filter; plotMarkers(mapFilter);
     });
   });
-  var kmlLayers = {
-    "Microzonificación AMVA 2016": omnivore.kml('MicroAMVA_2016.kml'),
-    "Geomorfología": omnivore.kml('Geomorfologia.kml'),
-    "Límite Urbano": omnivore.kml('Limite_urbano.kml'),
-    "Líneas Sísmicas": omnivore.kml('Lineas_Sismicas.kml')
-  };
-  L.control.layers(null, kmlLayers, {collapsed: false, position: 'bottomleft'}).addTo(leafMap);
+  var kmlLayers = {};
+  var capasConfig = [
+    { nombre: "Microzonificación AMVA 2016", archivo: "MicroAMVA_2016.geojson", color: "#ff6600" },
+    { nombre: "Geomorfología", archivo: "Geomorfologia.geojson", color: "#9b59b6" },
+    { nombre: "Límite Urbano", archivo: "Limite_urbano.geojson", color: "#e74c3c" },
+    { nombre: "Líneas Sísmicas", archivo: "Lineas_Sismicas.geojson", color: "#f1c40f" }
+  ];
+  capasConfig.forEach(function(capa) {
+    fetch(capa.archivo)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var layer = L.geoJSON(data, {
+          style: { color: capa.color, weight: 2, opacity: 0.8, fillOpacity: 0.2 },
+          pointToLayer: function(f, ll) {
+            return L.circleMarker(ll, { radius: 4, color: capa.color, fillOpacity: 0.7 });
+          },
+          onEachFeature: function(f, l) {
+            if (f.properties && f.properties.name) l.bindPopup(f.properties.name);
+          }
+        });
+        kmlLayers[capa.nombre] = layer;
+        if (window._layerControl) window._layerControl.remove();
+        window._layerControl = L.control.layers(null, kmlLayers, {collapsed: false, position: 'bottomleft'}).addTo(leafMap);
+      })
+      .catch(function(e) { console.warn('No cargó ' + capa.archivo, e); });
+  });
 }
 
 function markerColor(s) {
